@@ -34,7 +34,10 @@ async function startServer() {
     await connectMongoDB();
     console.log('✅ Connected to MongoDB');
 
-    // Apply Apollo Server middleware (Apollo Server v3 doesn't require await server.start())
+    // Start Apollo Server (required before applying middleware)
+    await server.start();
+    
+    // Apply Apollo Server middleware
     server.applyMiddleware({ app, path: '/graphql' });
 
     // Health check endpoint
