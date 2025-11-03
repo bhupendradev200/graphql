@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: graphql_postgres
+    environment:
+      POSTGRES_USER: graphql_user
+      POSTGRES_PASSWORD: graphql_pass
+      POSTGRES_DB: graphql_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U graphql_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - graphql_network
+
+  # MongoDB Database
+  mongodb:
+    image: mongo:7
+    container_name: graphql_mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: graphql_user
+      MONGO_INITDB_ROOT_PASSWORD: graphql_pass
+      MONGO_INITDB_DATABASE: graphql_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - graphql_network
+
+  # Node.js API Server
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: graphql_api
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      DATABASE_URL: "postgresql://graphql_user:graphql_pass@postgres:5432/graphql_db?schema=public"
+      MONGODB_URI: "mongodb://graphql_user:graphql_pass@mongodb:27017/graphql_db?authSource=admin"
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: sh -c "npx prisma generate && npx prisma migrate deploy && npm run dev"
+    networks:
+      - graphql_network
+
+  # Frontend React Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: graphql_frontend
+    environment:
+      - VITE_API_URL=http://localhost:4000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - api
+    networks:
+      - graphql_network
+
+volumes:
+  postgres_data:
+  mongodb_data:
+
+networks:
+  graphql_network:
+    driver: bridge
+

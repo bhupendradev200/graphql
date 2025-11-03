@@ -1,0 +1,46 @@
+// This is your Prisma schema file for PostgreSQL
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - stores user information
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  age       Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationship: A user can have many orders
+  orders    Order[]
+
+  @@map("users")
+}
+
+// Order model - stores order information
+model Order {
+  id        String   @id @default(uuid())
+  userId    String   // Foreign key to User
+  total     Float
+  status    String   @default("pending") // pending, completed, cancelled
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationship: Order belongs to a User
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Note: Product information is stored in MongoDB
+  // We'll use productId as a string to reference MongoDB products
+  productId String   // Reference to MongoDB Product _id
+
+  @@map("orders")
+}
+
