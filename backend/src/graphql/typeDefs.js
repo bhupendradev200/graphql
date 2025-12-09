@@ -103,6 +103,7 @@ export const typeDefs = gql`
     total: Float
     status: String
     productId: String
+  userId: String
   }
 
   input CreateProductInput {

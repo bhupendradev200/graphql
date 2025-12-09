@@ -250,6 +250,16 @@ const Mutation = {
       }
     }
 
+    // If userId is being updated, verify it exists
+    if (input.userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: input.userId },
+      });
+      if (!user) {
+        throw new Error(`User with id ${input.userId} not found`);
+      }
+    }
+
     return prisma.order.update({
       where: { id },
       data: input,
